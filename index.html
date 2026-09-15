@@ -136,6 +136,14 @@ input:focus,select:focus{border-color:var(--accent)}
   padding:5px 9px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600
 }
 .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.on[data-co="CTB"]{background:#ef6c00;border-color:#ef6c00}
+.chip.on[data-co="GMB"]{background:#2e7d32;border-color:#2e7d32}
+.chip.on[data-co="MTR"]{background:#1565c0;border-color:#1565c0}
+/* 揀咗邊間公司，設定頁所有主要按鈕（搵路線／選擇／加入／選擇方向）就用該公司顏色；
+   次要按鈕（↑／改上車站／移除／返回）維持原本大小同外觀 */
+#view-settings[data-co="CTB"] .btn.primary{background:#ef6c00;border-color:#ef6c00}
+#view-settings[data-co="GMB"] .btn.primary{background:#2e7d32;border-color:#2e7d32}
+#view-settings[data-co="MTR"] .btn.primary{background:#1565c0;border-color:#1565c0}
 .rowline{display:flex;align-items:center;gap:10px;padding:7px 0;font-size:14px}
 .rowline label{flex:1}
 select{width:auto;padding:8px 10px;font-size:14px}
@@ -184,7 +192,7 @@ nav.tabs button.on{color:var(--accent)}
 /* ---------- MTR cards ---------- */
 .mcard .rthead{align-items:center}
 .mtbig{
-  flex:none;min-width:58px;max-width:96px;text-align:center;background:#8b1a1a;color:#fff;
+  flex:none;min-width:58px;max-width:96px;text-align:center;background:#1565c0;color:#fff;
   border-radius:11px;padding:6px 8px;font-size:16px;font-weight:800;letter-spacing:.5px;line-height:1.2
 }
 .mtrdir{width:100px;flex:none}
@@ -203,10 +211,12 @@ nav.tabs button.on{color:var(--accent)}
   flex:none;background:var(--accent);color:#fff;border-radius:8px;
   padding:3px 6px;font-size:14.5px;font-weight:800;letter-spacing:.3px;line-height:1.3
 }
-/* 公司配色：城巴＝橙底白字、專線小巴＝綠底白字（字級／字重一律同上，唔會變） */
+/* 公司配色：城巴＝橙底白字、專線小巴＝綠底白字、港鐵＝藍底白字（字級／字重一律同上，唔會變） */
 .rbadge.ctb{background:#ef6c00}
 .rbadge.gmb{background:#2e7d32}
+.rbadge.mtr{background:#1565c0}
 .rbadge.lwb{background:#0075c2}
+.rtpill.mtr{background:#1565c0}
 .cotag{display:inline-block;font-size:10px;font-weight:700;color:#fff;border-radius:5px;
   padding:0 4px;margin-left:4px;vertical-align:1px;letter-spacing:0}
 .cotag.ctb{background:#ef6c00}
@@ -329,21 +339,41 @@ nav.tabs button.on{color:var(--accent)}
 <section class="view" id="view-settings">
   <div class="wrap">
 
-    <div class="panel">
-      <h2>① 用路線號碼搜尋</h2>
+    <div class="panel" data-vis="KMB CTB GMB MTR" id="pRoute">
+      <h2><span class="num">①</span> <span id="pRouteTitle">用路線號碼搜尋</span></h2>
       <div class="body">
         <div class="routes" id="coPick"></div>
-        <div class="searchrow">
-          <input type="text" id="rq" placeholder="例：1A、671X、N3D" autocomplete="off">
-          <button class="btn primary" id="rsearch">搵路線</button>
+        <div id="busSearch">
+          <div class="searchrow">
+            <input type="text" id="rq" placeholder="例：1A、671X、N3D" autocomplete="off">
+            <button class="btn primary" id="rsearch">搵路線</button>
+          </div>
+          <div class="hint" id="rdbHint">首次使用需下載路線清單（約 350KB，只做一次）</div>
+          <ul class="res" id="rres"></ul>
         </div>
-        <div class="hint" id="rdbHint">首次使用需下載路線清單（約 350KB，只做一次）</div>
-        <ul class="res" id="rres"></ul>
+        <div id="mtrSearch" style="display:none">
+          <div class="searchrow">
+            <input type="search" id="mq" placeholder="例：金鐘 / 天水圍 / ADM" autocomplete="off">
+            <select id="mline" style="flex:none">
+              <option value="">全部路綫</option>
+            </select>
+          </div>
+          <div class="hint">打站名、英文或站碼（亦可揀一條綫瀏覽沿綫車站）→ 按「選擇方向」→ <b>揀上行或下行</b>才加入。支援 10 條重鐵路綫。</div>
+          <ul class="res" id="mres"></ul>
+        </div>
       </div>
     </div>
 
-    <div class="panel">
-      <h2>② 搜尋巴士站</h2>
+    <div class="panel" data-vis="MTR" id="pMineMtr">
+      <h2><span class="num">②</span> 我的地鐵站<span id="myMtrCount" style="float:right;font-weight:400"></span></h2>
+      <div class="body">
+        <ul class="mine" id="mineMtr"></ul>
+        <div class="hint">主頁每項只佔一行：車站名 → 路綫／方向（往 XXX）→ 最近 3 班。想改方向按「改方向」。</div>
+      </div>
+    </div>
+
+    <div class="panel" data-vis="KMB" id="pStopSearch">
+      <h2><span class="num">②</span> 搜尋巴士站</h2>
       <div class="body">
         <div class="searchrow">
           <input type="search" id="q" placeholder="例：觀塘定富街 / 竹園邨 / KT646" autocomplete="off">
@@ -353,8 +383,8 @@ nav.tabs button.on{color:var(--accent)}
       </div>
     </div>
 
-    <div class="panel">
-      <h2>③ 直接用 STOP ID 新增</h2>
+    <div class="panel" data-vis="KMB" id="pStopId">
+      <h2><span class="num">③</span> 直接用 STOP ID 新增</h2>
       <div class="body">
         <div class="searchrow">
           <input type="text" id="sid" placeholder="例：7380707A36C032B9" autocomplete="off">
@@ -364,46 +394,24 @@ nav.tabs button.on{color:var(--accent)}
       </div>
     </div>
 
-    <div class="panel">
-      <h2>④ 地鐵（港鐵）搜尋</h2>
-      <div class="body">
-        <div class="searchrow">
-          <input type="search" id="mq" placeholder="例：金鐘 / 天水圍 / ADM" autocomplete="off">
-          <select id="mline" style="flex:none">
-            <option value="">全部路綫</option>
-          </select>
-        </div>
-        <div class="hint">打站名、英文或站碼（亦可揀一條綫瀏覽沿綫車站）→ 按「選擇方向」→ <b>揀上行或下行</b>才加入。支援 10 條重鐵路綫。</div>
-        <ul class="res" id="mres"></ul>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>⑤ 我的路線<span id="myRoutesCount" style="float:right;font-weight:400"></span></h2>
+    <div class="panel" data-vis="KMB CTB GMB" id="pMineRoutes">
+      <h2><span class="num">④</span> <span id="pMineRoutesTitle">我的路線</span><span id="myRoutesCount" style="float:right;font-weight:400"></span></h2>
       <div class="body">
         <ul class="mine" id="mineRoutes"></ul>
         <div class="hint">主頁會顯示：路線號碼 → 目的地／方向 → 上車站 → 未來 3 班到站時間。</div>
       </div>
     </div>
 
-    <div class="panel">
-      <h2>⑥ 我的地鐵站<span id="myMtrCount" style="float:right;font-weight:400"></span></h2>
-      <div class="body">
-        <ul class="mine" id="mineMtr"></ul>
-        <div class="hint">主頁每項只佔一行：車站名 → 路綫／方向（往 XXX）→ 最近 3 班。想改方向按「改方向」。</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>⑦ 我的巴士站<span id="mineCount" style="float:right;font-weight:400"></span></h2>
+    <div class="panel" data-vis="KMB" id="pMineStops">
+      <h2><span class="num">⑤</span> 我的巴士站<span id="mineCount" style="float:right;font-weight:400"></span></h2>
       <div class="body">
         <ul class="mine" id="mine"></ul>
         <div class="hint">點路線chip可選擇只顯示邊條線；唔揀＝顯示全部途經路線（每條線最多 3 班）。</div>
       </div>
     </div>
 
-    <div class="panel">
-      <h2>⑧ 顯示設定</h2>
+    <div class="panel" id="pSys">
+      <h2>⚙️ 顯示設定</h2>
       <div class="body">
         <div class="rowline"><label>自動更新間隔</label>
           <select id="interval">
@@ -414,7 +422,7 @@ nav.tabs button.on{color:var(--accent)}
           </select>
         </div>
         <div class="rowline"><label>資料來源</label>
-          <span style="font-size:12px;color:var(--fg3)">data.etabus.gov.hk</span>
+          <span style="font-size:12px;color:var(--fg3)">data.gov.hk 開放數據</span>
         </div>
         <div class="rowline">
           <button class="btn sm" id="clearCache">清除站點／路線快取</button>
@@ -425,13 +433,14 @@ nav.tabs button.on{color:var(--accent)}
     </div>
 
     <footer>
-      巴士資料：data.gov.hk「資料一線通」九巴／龍運實時到站 API（每分鐘更新）<br>
+      巴士資料：data.gov.hk「資料一線通」九巴／龍運／城巴實時到站 API、專線小巴到站 API（每分鐘更新）<br>
       地鐵資料：data.gov.hk 港鐵 Next Train API（每分鐘更新）<br>
       天氣資料：data.gov.hk 氣象分類 →「本港地區天氣報告」<br>
       本頁純前端運作，無後端、無追蹤，設定只存在你部裝置。
     </footer>
   </div>
 </section>
+
 
 <!-- ============== NEARBY ============== -->
 <section class="view" id="view-nearby">
@@ -979,23 +988,29 @@ let searchCo = 'KMB';
 function renderCoPick(){
   const box = $('#coPick');
   if(!box) return;
-  const opts = [['KMB','🚌 九巴／龍運'], ['CTB','🟠 城巴'], ['GMB','🟢 專線小巴']];
+  const opts = [['KMB','🚌 九巴／龍運'], ['CTB','城巴'], ['GMB','專線小巴'], ['MTR','🚇 地鐵']];
   box.innerHTML = opts.map(([k,label]) =>
     '<button class="chip' + (searchCo === k ? ' on' : '') + '" data-co="' + k + '">' + label + '</button>').join('');
   box.querySelectorAll('[data-co]').forEach(b => b.onclick = ()=>{
     searchCo = b.dataset.co;
     renderCoPick();
     $('#rres').innerHTML = '';
+    $('#mres').innerHTML = '';
     $('#rq').value = '';
+    if($('#mq')) $('#mq').value = '';
     const hints = {
       KMB: '首次使用需下載路線清單（約 350KB，只做一次）',
       CTB: '城巴路線清單（約 400 條）首次使用會下載一次',
-      GMB: '專線小巴路線資料已內置，即打即搵（例：69、1A）'
+      GMB: '專線小巴路線資料已內置，即打即搵（例：69、1A）',
+      MTR: ''
     };
-    $('#rdbHint').textContent = hints[searchCo] || '';
+    const hint = $('#rdbHint');
+    if(hint) hint.textContent = hints[searchCo] || '';
     $('#rq').placeholder = searchCo === 'GMB' ? '例：69、1、40' : (searchCo === 'CTB' ? '例：1、5B、10' : '例：1A、671X、N3D');
+    applySearchMode();
   });
 }
+/* 公司按鈕嘅排列同配色：巴士公司＝紅／橙／綠、地鐵＝藍 */
 async function ensureCtbRoutes(){
   if(ctbRouteList) return ctbRouteList;
   const j = await getJSON(CTB_API + '/route/CTB');
@@ -1363,7 +1378,7 @@ function renderHome(){
     const lineName = MTR_LINES[m.line] ? MTR_LINES[m.line].zh : m.line;
     return '<div class="stop mcard">'
       +  '<div class="mline">'
-      +    '<span class="rbadge mbadge">'+esc(mtrName(m.sta))+'</span>'
+      +    '<span class="rbadge mbadge mtr">'+esc(mtrName(m.sta))+'</span>'
       +    '<span class="rdir" data-mdir="'+i+'" title="'+esc(mtrName(m.sta))+' · '+esc(lineName)+' · '+mtrDirLabel(m.dir)+'">'
       +      esc(mtrDirLabel(m.dir))+'</span>'
       +    '<span class="rtimes" data-mstate="'+i+'"><span class="mnote">⋯</span></span>'
@@ -1574,8 +1589,10 @@ function renderRouteResults(){
       return;
     }
     routeHits = ctbVariants(q);
-  }else{
+  }else if(searchCo === 'GMB'){
     routeHits = gmbVariants(q);
+  }else{
+    return;                                  // 地鐵模式唔用呢個搜尋框
   }
   if(!routeHits.length){
     ul.innerHTML = '<li><span class="hint" style="margin:0">搵唔到「'+esc(q)+'」，試吓完整路線號碼'
@@ -1584,7 +1601,7 @@ function renderRouteResults(){
   }
   ul.innerHTML = routeHits.map((r,i)=>'<li><div class="nm"><span class="rtpill '+(CO_CLS[r.co]||'')+'">'+esc(r.route)+'</span>'
     + (r.orig ? esc(r.orig)+' → '+esc(r.dest) : '往 '+esc(r.dest))
-    + '<em>'+ CO_ZH[r.co] + ' · ' + (Number(r.dir) === 2 || r.dir === 'I' ? '回程' : '去程')
+    + '<em>'+ CO_ZH[r.co || 'KMB'] + ' · ' + (Number(r.dir) === 2 || r.dir === 'I' ? '回程' : '去程')
     + (r.co === 'KMB' && Number(r.st) !== 1 ? ' · 特別班次' : '') + '</em></div>'
     + '<button class="btn sm primary" data-pick="'+i+'">選擇</button></li>').join('');
   ul.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>pickVariant(routeHits[+b.dataset.pick], b));
@@ -1637,6 +1654,10 @@ function addRoute(r){
     return;
   }
   cfg.routes.push(r);
+  searchCo = r.co || 'KMB';                  // 加入後跳到該公司，等你喺「我的路線」即刻見到
+  const pick = $('#coPick');
+  if(pick) pick.querySelectorAll('[data-co]').forEach(b=>b.classList.toggle('on', b.dataset.co === searchCo));
+  applySearchMode();
   saveCfg(); renderMineRoutes(); renderHome(); refresh();
   toast('已加入主頁：' + (CO_ZH[r.co||'KMB'] || '') + ' ' + r.route + ' 往 ' + r.dest);
 }
@@ -1651,28 +1672,39 @@ function toast(msg){
   toast._t = setTimeout(()=>{ t.className = ''; }, 2600);
 }
 
+/* 只顯示目前揀選公司嘅路線（cfg.routes 本身保留全部公司） */
+function mineRoutesOf(co){ return cfg.routes.map((r,i)=>({r, i})).filter(x=> (x.r.co || 'KMB') === co); }
 function renderMineRoutes(){
   const ul = $('#mineRoutes');
-  $('#myRoutesCount').textContent = cfg.routes.length ? cfg.routes.length+' 條' : '';
-  if(!cfg.routes.length){
-    ul.innerHTML = '<div class="hint" style="margin:0">尚未加入任何路線。用上面「① 用路線號碼搜尋」加入，例如打「1A」。</div>';
+  const co = (searchCo === 'MTR') ? 'KMB' : searchCo;
+  const list = mineRoutesOf(co);
+  const who = co === 'CTB' ? '城巴' : (co === 'GMB' ? '專線小巴' : '巴士');
+  $('#myRoutesCount').textContent = list.length ? list.length + ' 條' : '';
+  if(!list.length){
+    ul.innerHTML = '<div class="hint" style="margin:0">尚未加入任何' + who + '路線。用上面「① 用路線號碼搜尋」加入。</div>';
     return;
   }
-  ul.innerHTML = cfg.routes.map((r,i)=>
-      '<li><div class="t"><div class="nm">'
-    + '<span class="rtpill">'+esc(r.route)+'</span>往 '+esc(r.dest)
-    + '<em>上車站：'+esc(r.stopName || r.stopId)
-    + ' · '+(r.dir === 'I' ? '回程' : '去程')+(Number(r.st) !== 1 ? ' · 特別班次' : '')+'</em></div>'
-    + '<button class="btn sm" data-rup="'+i+'" title="上移">↑</button>'
-    + '<button class="btn sm" data-rchg="'+i+'">改上車站</button>'
-    + '<button class="btn sm" data-rrm="'+i+'">移除</button></div></li>').join('');
+  ul.innerHTML = list.map(({r, i})=>{
+    const back = (r.co === 'GMB') ? Number(r.dir) === 2 : r.dir === 'I';
+    return '<li><div class="t"><div class="nm">'
+      + '<span class="rtpill ' + (CO_CLS[r.co || 'KMB'] || '') + '">' + esc(r.route) + '</span>往 ' + esc(r.dest)
+      + '<em>上車站：' + esc(r.stopName || r.stopId)
+      + ' · ' + (back ? '回程' : '去程')
+      + (r.co === 'GMB' ? '' : (Number(r.st) !== 1 ? ' · 特別班次' : '')) + '</em></div>'
+      + '<button class="btn sm" data-rup="' + i + '" title="上移">↑</button>'
+      + '<button class="btn sm" data-rchg="' + i + '">改上車站</button>'
+      + '<button class="btn sm" data-rrm="' + i + '">移除</button></div></li>';
+  }).join('');
 
   ul.querySelectorAll('[data-rrm]').forEach(b=>b.onclick=()=>{
     cfg.routes.splice(+b.dataset.rrm,1); saveCfg(); renderMineRoutes(); renderHome(); refresh();
   });
   ul.querySelectorAll('[data-rup]').forEach(b=>b.onclick=()=>{
-    const i=+b.dataset.rup; if(i===0) return;
-    const [x]=cfg.routes.splice(i,1); cfg.routes.splice(i-1,0,x);
+    const i = +b.dataset.rup, c = cfg.routes[i] && (cfg.routes[i].co || 'KMB');
+    let j = -1;
+    for(let k = i - 1; k >= 0; k--){ if((cfg.routes[k].co || 'KMB') === c){ j = k; break; } }   // 只同自己公司換位
+    if(j < 0) return;
+    const [x] = cfg.routes.splice(i,1); cfg.routes.splice(j,0,x);
     saveCfg(); renderMineRoutes(); renderHome(); refresh();
   });
   ul.querySelectorAll('[data-rchg]').forEach(b=>b.onclick=async()=>{
@@ -1716,8 +1748,9 @@ function renderMtrResults(){
   if(!q.trim() && !line){ ul.innerHTML = ''; return; }   // 靜態提示已經講明，唔重複
   const rows = mtrSearch(q, line);
   if(!rows.length){ ul.innerHTML = '<li><span class="hint" style="margin:0">搵唔到相符嘅地鐵站。</span></li>'; return; }
-  ul.innerHTML = rows.map((r,i)=>'<li><div class="nm">'+esc(r.zh)
-    + '<em>'+esc(MTR_LINES[r.line].zh)+' · '+esc(r.sta)+'</em></div>'
+  ul.innerHTML = rows.map((r,i)=>'<li><div class="nm"><span class="rtpill mtr">'+esc(MTR_LINES[r.line].zh)+'</span>'
+    + esc(r.zh)
+    + '<em>'+esc(r.sta)+'</em></div>'
     + '<button class="btn sm primary" data-pickm="'+i+'">選擇方向</button></li>').join('');
   ul.querySelectorAll('[data-pickm]').forEach(b=>b.onclick=()=>pickMtrDir(rows[+b.dataset.pickm], b));
 }
@@ -1743,7 +1776,7 @@ function renderMtrDirPicker(v, res, err){
       + '<button class="btn sm primary" data-dir="'+d+'" data-dest="'+esc(dests[0]||'')+'">加入</button></li>';
   }).join('');
   ul.innerHTML = '<li class="wizrow"><b>'+esc(v.zh)+'</b>'
-    + '<span>'+esc(lineName)+' · 請揀方向</span>'
+    + '<span><span class="rtpill mtr">'+esc(lineName)+'</span>請揀方向</span>'
     + '<button class="btn sm ghost" id="mtrBack">← 返回</button></li>' + rows;
   $('#mtrBack').onclick = ()=>{ editingMtr = -1; renderMtrResults(); };
   ul.querySelectorAll('[data-dir]').forEach(b=>b.onclick=()=>{
@@ -1771,12 +1804,12 @@ function renderMineMtr(){
   const ul = $('#mineMtr');
   $('#myMtrCount').textContent = cfg.mtr.length ? cfg.mtr.length+' 個' : '';
   if(!cfg.mtr.length){
-    ul.innerHTML = '<div class="hint" style="margin:0">尚未加入任何地鐵站。用上面「④ 地鐵（港鐵）搜尋」加入（要先揀方向）。</div>';
+    ul.innerHTML = '<div class="hint" style="margin:0">尚未加入任何地鐵站。揀上面「🚇 地鐵」→ 用「① 地鐵（港鐵）搜尋」加入（要先揀方向）。</div>';
     return;
   }
   ul.innerHTML = cfg.mtr.map((m,i)=>
-      '<li><div class="t"><div class="nm">'+esc(mtrName(m.sta))
-    + '<em>'+esc(MTR_LINES[m.line] ? MTR_LINES[m.line].zh : m.line)+' · '+esc(m.sta)
+      '<li><div class="t"><div class="nm"><span class="rtpill mtr">'+esc(MTR_LINES[m.line] ? MTR_LINES[m.line].zh : m.line)+'</span>'+esc(mtrName(m.sta))
+    + '<em>'+esc(m.sta)
     + ' · '+esc(mtrDirLabel(m.dir))+(m.dest ? ' 往 '+esc(m.dest) : '')+'</em></div>'
     + '<button class="btn sm" data-mup="'+i+'" title="上移">↑</button>'
     + '<button class="btn sm" data-mchg="'+i+'">改方向</button>'
@@ -1795,6 +1828,34 @@ function renderMineMtr(){
     await pickMtrDir({line:m.line, sta:m.sta, zh:mtrName(m.sta)}, b);
     const w = $('#mres'); if(w && w.scrollIntoView) w.scrollIntoView({behavior:'smooth', block:'center'});
   });
+}
+
+/* ---------------------------- 設定頁分頁 ------------------------------ */
+const CIRCLED = ['①','②','③','④','⑤','⑥','⑦','⑧','⑨'];
+function updateSetPanels(){
+  let n = 0;
+  document.querySelectorAll('#view-settings .panel[data-vis]').forEach(p=>{
+    const on = (p.dataset.vis || '').split(/\s+/).indexOf(searchCo) >= 0;
+    p.style.display = on ? '' : 'none';
+    if(!on) return;
+    const num = p.querySelector('h2 .num');
+    if(num){ n++; num.textContent = CIRCLED[n - 1] || ''; }
+  });
+}
+function applySearchMode(){
+  const isMtr = searchCo === 'MTR';
+  const bs = $('#busSearch'), ms = $('#mtrSearch'), tt = $('#pRouteTitle');
+  if(bs) bs.style.display = isMtr ? 'none' : '';
+  if(ms) ms.style.display = isMtr ? '' : 'none';
+  if(tt) tt.textContent = isMtr ? '地鐵（港鐵）搜尋' : '用路線號碼搜尋';
+  /* 所有主要按鈕跟公司配色（CSS 一次過處理） */
+  const vs = $('#view-settings');
+  if(vs) vs.dataset.co = searchCo;
+  /* 「我的路線」標題跟公司 */
+  const rt = $('#pMineRoutesTitle');
+  if(rt) rt.textContent = searchCo === 'CTB' ? '我的城巴路線' : (searchCo === 'GMB' ? '我的專線小巴路線' : '我的路線');
+  updateSetPanels();
+  renderMineRoutes();
 }
 
 function addStop(id, name){
@@ -1924,6 +1985,7 @@ window.addEventListener('beforeunload', ()=>{ clearTimeout(timer); clearInterval
   }catch(e){}
   renderHome(); renderMine(); renderMineRoutes(); renderMineMtr();
   renderCoPick();
+  applySearchMode();
   refresh();
   ensureDB(); ensureRDB();                    // 背景預熱清單，令搜尋即時有結果
   ensureWeather();
