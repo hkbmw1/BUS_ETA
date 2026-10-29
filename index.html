@@ -497,6 +497,17 @@ nav.tabs button.on{color:var(--accent)}
     </div>
 
     <div class="panel">
+      <h2>以街名搵路線</h2>
+      <div class="body">
+        <div class="searchrow">
+          <input type="search" id="ns" placeholder="打街名，例如：英皇道 / 青山公路 / 亞皆老街" autocomplete="off">
+        </div>
+        <div class="hint" id="nsInfo">輸入 2 個字或以上即自動搜尋。城巴／小巴站名多數含街名；九巴站名以地標為主。</div>
+        <ul class="nlist" id="nsl"></ul>
+      </div>
+    </div>
+
+    <div class="panel">
       <h2>以巴士站為中心（後備）</h2>
       <div class="body">
         <div class="searchrow">
@@ -549,7 +560,7 @@ const S_KEY = 'hkbus.stops.v1';
 const R_KEY = 'hkbus.routes.v1';
 const S_MAX_AGE = 7 * 864e5;          // 站點清單快取 7 日
 const MTR_API = 'https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php';
-const APP_VER = '1.24';                 // ← 每次出快照只需改呢一個數
+const APP_VER = '1.29';                 // ← 每次出快照只需改呢一個數
 
 /* 港鐵重鐵路綫／車站（10 條綫、121 個綫站組合、98 個車站）
    已逐個組合向 MTR 官方 API 實測驗證（2026-09）。
@@ -1290,6 +1301,47 @@ async function scanNearby(){
   paintRoutes();
 }
 
+/* 一行路線卡（附近／街名搜尋共用）；sfx 用嚟分隔兩張清單嘅 data-* 屬性 */
+function routeRowHTML(r, i, sfx){
+  sfx = sfx || '';
+  const live = r.items.filter(x => x.eta).slice(0, 3);
+  const times = live.length ? live.map(x => pillHTML(x.eta)).join('')
+                            : '<div class="pill past"><b>—</b><em>無班次</em></div>';
+  return '<li>'
+    +  '<div class="nhead" data-ndet' + sfx + '="' + i + '" title="撳一下睇路線詳情">'
+    +    '<span class="rbadge '+(CO_CLS[r.co]||'')+'" title="'+esc(CO_ZH[r.co]||'')+' '+esc(r.route)+'">' + esc(r.route) + '</span>'
+    +    '<span class="rdir">往 ' + esc(r.dest) + '</span>'
+    +    '<span class="ndist">' + fmtDist(r.dist) + '</span>'
+    +    '<button class="btn sm" data-nadd' + sfx + '="' + i + '" title="加到主頁">＋</button>'
+    +  '</div>'
+    +  '<div class="nsub">'
+    +    '<span class="nstop"' + (sfx ? '' : ' data-exp="' + i + '" title="撳一下睇呢個站全部路線"') + '>' + esc(r.stopName) + '</span>'
+    +    '<span class="rtimes">' + times + '</span>'
+    +  '</div>'
+    +  (sfx ? '' : '<div class="nexp" data-ne="' + i + '" hidden></div>')
+    + '</li>';
+}
+function bindRouteRows(ul, list, sfx){
+  sfx = sfx || '';
+  ul.querySelectorAll('[data-ndet' + sfx + ']').forEach(h => h.onclick = ev=>{
+    if(ev.target.closest('[data-nadd' + sfx + ']')) return;
+    const r = list[+h.getAttribute('data-ndet' + sfx)];
+    openRouteDetailRef({co: r.co, route: r.route, dir: r.dir, st: Number(r.st) || 1, dest: r.dest,
+                        routeId: r.routeId, stopId: r.stopId, stopName: r.stopName}, -1);
+  });
+  ul.querySelectorAll('[data-nadd' + sfx + ']').forEach(b => b.onclick = ev=>{
+    ev.stopPropagation();
+    const r = list[+b.getAttribute('data-nadd' + sfx)];
+    addRoute({co: r.co, route: r.route, dir: r.dir, st: Number(r.st) || 1, dest: r.dest,
+              routeId: r.routeId, stopId: r.stopId, stopName: r.stopName});
+    b.textContent = '✓'; b.disabled = true;
+  });
+  if(sfx) return;
+  ul.querySelectorAll('[data-exp]').forEach(h => h.onclick = ()=>{
+    const r = list[+h.dataset.exp];
+    toggleNearArrivals({id: r.stopId, name: r.stopName, co: r.co}, +h.dataset.exp);
+  });
+}
 function paintRoutes(){
   const ul = $('#nlist'), cnt = $('#nCount'), info = $('#nInfo');
   if(!ul) return;
@@ -1306,41 +1358,8 @@ function paintRoutes(){
       + (q ? '篩選唔到符合嘅路線。' : '附近站暫時冇實時班次資料。') + '</span></li>';
     return;
   }
-  ul.innerHTML = list.map((r, i)=>{
-    const live = r.items.filter(x => x.eta).slice(0, 3);
-    const times = live.length ? live.map(x => pillHTML(x.eta)).join('')
-                              : '<div class="pill past"><b>—</b><em>無班次</em></div>';
-    return '<li>'
-      +  '<div class="nhead" data-ndet="' + i + '" title="撳一下睇路線詳情">'
-      +    '<span class="rbadge '+(CO_CLS[r.co]||'')+'" title="'+esc(CO_ZH[r.co]||'')+' '+esc(r.route)+'">' + esc(r.route) + '</span>'
-      +    '<span class="rdir">往 ' + esc(r.dest) + '</span>'
-      +    '<span class="ndist">' + fmtDist(r.dist) + '</span>'
-      +    '<button class="btn sm" data-nadd="' + i + '" title="加到主頁">＋</button>'
-      +  '</div>'
-      +  '<div class="nsub">'
-      +    '<span class="nstop" data-exp="' + i + '" title="撳一下睇呢個站全部路線">' + esc(r.stopName) + '</span>'
-      +    '<span class="rtimes">' + times + '</span>'
-      +  '</div>'
-      +  '<div class="nexp" data-ne="' + i + '" hidden></div>'
-      + '</li>';
-  }).join('');
-  ul.querySelectorAll('[data-ndet]').forEach(h => h.onclick = ev=>{
-    if(ev.target.closest('[data-nadd]')) return;         // 撳「＋」唔開詳情
-    const r = list[+h.dataset.ndet];
-    openRouteDetailRef({co: r.co, route: r.route, dir: r.dir, st: Number(r.st) || 1, dest: r.dest,
-                        routeId: r.routeId, stopId: r.stopId, stopName: r.stopName}, -1);
-  });
-  ul.querySelectorAll('[data-nadd]').forEach(b => b.onclick = ev=>{
-    ev.stopPropagation();
-    const r = list[+b.dataset.nadd];
-    addRoute({co: r.co, route: r.route, dir: r.dir, st: Number(r.st) || 1, dest: r.dest,
-              routeId: r.routeId, stopId: r.stopId, stopName: r.stopName});
-    b.textContent = '✓'; b.disabled = true;
-  });
-  ul.querySelectorAll('[data-exp]').forEach(h => h.onclick = ()=>{
-    const r = list[+h.dataset.exp];
-    toggleNearArrivals({id: r.stopId, name: r.stopName, co: r.co}, +h.dataset.exp);
-  });
+  ul.innerHTML = list.map((r, i)=> routeRowHTML(r, i, '')).join('');
+  bindRouteRows(ul, list, '');
 }
 async function toggleNearArrivals(s, i){
   const box = document.querySelector('[data-ne="' + i + '"]');
@@ -1376,6 +1395,87 @@ function renderNearSearch(){
     renderNearby();
   });
 }
+/* ---------------- 以街名搵路線 ---------------- */
+let nsList = [], nsToken = 0;
+const nsCache = new Map();
+
+function streetStops(q){
+  const hits = [], seen = new Set(), ql = q.toLowerCase();
+  const push = (co, id, nm, en) => {
+    const k = co + '|' + id;
+    if(seen.has(k)) return;
+    if(!(nm || '').includes(q) && !String(en || '').toLowerCase().includes(ql)) return;
+    seen.add(k); hits.push({co, id, name: nm || id});
+  };
+  if(db) for(const r of db.list) push('KMB', r[0], r[1] || r[2] || '', r[2] || '');
+  coBank();
+  if(CTB_STOPS) for(const s of CTB_STOPS.values()) push('CTB', s.id, s.nm || '');
+  if(GMB_STOPS) for(const s of GMB_STOPS.values()) push('GMB', s.id, s.nm || '');
+  hits.forEach(h=>{
+    const pt = stopPos(h.co, h.id);
+    h.dist = (nPos && pt) ? haversine(nPos.lat, nPos.lon, pt[0], pt[1]) : NaN;
+  });
+  if(nPos) hits.sort((a,b)=> (isFinite(a.dist) ? a.dist : 1e12) - (isFinite(b.dist) ? b.dist : 1e12));
+  else     hits.sort((a,b)=> a.name.length - b.name.length || a.name.localeCompare(b.name, 'zh'));
+  return hits;
+}
+
+async function streetSearch(q){
+  const ul = $('#nsl'), info = $('#nsInfo');
+  if(!ul) return;
+  q = (q || '').trim();
+  if(q.length < 2){
+    ul.innerHTML = '';
+    info.textContent = '輸入 2 個字或以上即自動搜尋。城巴／小巴站名多數含街名；九巴站名以地標為主。';
+    return;
+  }
+  if(!db){ ul.innerHTML = '<li><span class="hint" style="margin:0">站點清單載入中，請稍等…</span></li>'; ensureDB().then(()=>streetSearch(q)); return; }
+  const token = ++nsToken;
+  ul.innerHTML = '<li><span class="hint" style="margin:0">搵緊「' + esc(q) + '」…</span></li>';
+  const hits = streetStops(q);
+  if(!hits.length){
+    ul.innerHTML = '';
+    info.textContent = '搵唔到站名含「' + q + '」嘅巴士站。試短啲嘅街名（例如「英皇道」而唔係「英皇道近糖水道」）。';
+    return;
+  }
+  // 每間公司各自取最近 N 個：避免某一間公司（例如九巴）因為排序較後而完全冇影
+  const PER_CO = 4, use = [];
+  for(const co of ['KMB', 'CTB', 'GMB']) hits.filter(h=> h.co === co).slice(0, PER_CO).forEach(h=> use.push(h));
+  const key = q + '|' + use.map(h=> h.co + ':' + h.id).join(',');
+  let routes = nsCache.get(key);
+  if(!routes){
+    const res = await Promise.allSettled(use.map(h => fetchEtaCo(h.co, h.id).then(r => ({h, rows: r.rows}))));
+    const map = new Map();
+    for(const x of res){
+      if(x.status !== 'fulfilled') continue;
+      const h = x.value.h, rows = x.value.rows;
+      for(const g of groupEta(rows)){
+        const k2 = [g.co, g.route, g.dir, g.st].join('|');
+        const item = {co:g.co, route:g.route, dir:g.dir, st:g.st, dest:g.dest,
+                      routeId:g.route_id || g.route, stopId:h.id, stopName:h.name,
+                      dist:h.dist, items:g.items};
+        const prev = map.get(k2);
+        if(!prev || (isFinite(item.dist) && (!isFinite(prev.dist) || item.dist < prev.dist))) map.set(k2, item);
+      }
+    }
+    routes = [...map.values()].sort((a,b)=> (isFinite(a.dist) ? a.dist : 1e12) - (isFinite(b.dist) ? b.dist : 1e12));
+    nsCache.set(key, routes);
+  }
+  if(token !== nsToken) return;
+  nsList = routes;
+  const by = {KMB:0, CTB:0, GMB:0};
+  routes.forEach(r=> by[r.co] = (by[r.co] || 0) + 1);
+  info.textContent = '「' + q + '」有 ' + hits.length + ' 個站；每間公司取最近 ' + PER_CO + ' 個（共 ' + use.length + ' 個）→ '
+    + routes.length + ' 條線（九巴 ' + by.KMB + '／城巴 ' + by.CTB + '／小巴 ' + by.GMB + '）'
+    + (nPos ? '' : '。未定位：按站名排序');
+  if(!routes.length){
+    ul.innerHTML = '<li><span class="hint" style="margin:0">呢啲站暫時冇路線／班次資料。</span></li>';
+    return;
+  }
+  ul.innerHTML = routes.map((r,i)=> routeRowHTML(r, i, 's')).join('');
+  bindRouteRows(ul, routes, 's');
+}
+
 async function initNearby(){
   if(!nInit){
     nInit = true;
@@ -1392,6 +1492,17 @@ async function initNearby(){
     $('#nq').addEventListener('input', ()=>{ clearTimeout(deb); deb = setTimeout(renderNearSearch, 200); });
     $('#geoBtn').onclick = locate;
     if($('#nf')) $('#nf').addEventListener('input', paintRoutes);
+    if($('#ns')){
+      let ndeb;
+      $('#ns').addEventListener('input', ev=>{
+        const v = ev.target.value;
+        clearTimeout(ndeb);
+        ndeb = setTimeout(()=>streetSearch(v), 350);
+      });
+      $('#ns').addEventListener('keydown', ev=>{
+        if(ev.key === 'Enter'){ clearTimeout(ndeb); streetSearch(ev.target.value); }
+      });
+    }
     ensureDB().then(()=>renderNearby());
   }
   renderNearby();
@@ -1552,7 +1663,7 @@ async function renderDetMap(r, rows){
   try{
     detMap = L.map(el, {zoomControl: true, scrollWheelZoom: false, attributionControl: true});
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: '© OpenStreetMap'
+      maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>'
     }).addTo(detMap);
     L.polyline(pts.map(p=>[p[0], p[1]]), {color:'#666', weight:3, opacity:.7}).addTo(detMap);
     pts.forEach(([la, ln, s])=>{
@@ -1563,6 +1674,8 @@ async function renderDetMap(r, rows){
     });
     addMyPosMarker();
     fitDet();
+    // 容器高度往往喺 map 建立後才定稿，所以要等一帧再量度並重新 fit
+    requestAnimationFrame(()=>{ if(!detMap) return; try{ detMap.invalidateSize(); fitDet(); }catch(e){} });
   }catch(e){
     el.innerHTML = '<div class="nomap">地圖載入失敗</div>';
   }
